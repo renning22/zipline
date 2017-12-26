@@ -1063,7 +1063,7 @@ class TradingAlgorithm(object):
 
         return csv_data_source
 
-    def add_event(self, rule=None, callback=None):
+    def add_event(self, rule, callback=None):
         """Adds an event to the algorithm's EventManager.
 
         Parameters
