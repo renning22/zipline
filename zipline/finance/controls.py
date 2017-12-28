@@ -23,6 +23,11 @@ from zipline.errors import (
     AccountControlViolation,
     TradingControlViolation,
 )
+from zipline.utils.input_validation import (
+    expect_bounded,
+    expect_types,
+)
+
 
 log = logbook.Logger('TradingControl')
 
@@ -424,4 +429,43 @@ class MaxLeverage(AccountControl):
         Fail if the leverage is greater than the allowed leverage.
         """
         if _account.leverage > self.max_leverage:
+            self.fail()
+
+
+class MinLeverage(AccountControl):
+    """
+    AccountControl representing a limit on the minimum leverage allowed
+    by the algorithm after a threshold period of time.
+    """
+
+    @expect_types(
+        __funcname='MinLeverage',
+        min_leverage=(int, float),
+        deadline=pd.datetime
+    )
+    @expect_bounded(__funcname='MinLeverage', min_leverage=(0, None))
+    def __init__(self, min_leverage, deadline):
+        """
+        min_leverage is the gross leverage in decimal form. For example,
+        2, limits an algorithm to trading at minimum double the account value.
+        """
+        super(MinLeverage, self).__init__(min_leverage=min_leverage,
+                                          deadline=deadline)
+        self.min_leverage = min_leverage
+        self.deadline = deadline
+
+    def validate(self,
+                 _portfolio,
+                 account,
+                 algo_datetime,
+                 _algo_current_data):
+        """
+        Make validation checks if we are after the deadline.
+        Fail if the leverage is less than the min leverage.
+        """
+        # if self.min_leverage == 2:
+        #     from nose.tools import set_trace; set_trace()
+
+        if algo_datetime > self.deadline and \
+           account.leverage < self.min_leverage:
             self.fail()
