@@ -29,7 +29,7 @@ from zipline.utils.memoize import remember_last
 log = logbook.Logger('Trading')
 
 
-DEFAULT_CAPITAL_BASE = 1e5
+DEFAULT_CAPITAL_BASE = 10000
 
 
 class TradingEnvironment(object):
@@ -93,10 +93,8 @@ class TradingEnvironment(object):
         if not trading_calendar:
             trading_calendar = get_calendar("NYSE")
 
-        print('trading_calendar2: {}'.format(trading_calendar))
-        print('self.bm_symbol: {}'.format(self.bm_symbol))
-        print('trading_calendar.day: {}'.format(trading_calendar.day))
-        print('trading_calendar.schedule.index: {}'.format(trading_calendar.schedule.index))
+        log.info('trading_calendar.day: {}'.format(trading_calendar.day))
+        log.info('trading_calendar.schedule.index: {}'.format(trading_calendar.schedule.index))
 
         # This block is a piece of love.
         #
@@ -137,8 +135,8 @@ class SimulationParameters(object):
     def __init__(self, start_session, end_session,
                  trading_calendar,
                  capital_base=DEFAULT_CAPITAL_BASE,
-                 emission_rate='daily',
-                 data_frequency='daily',
+                 emission_rate='minute',
+                 data_frequency='minute',
                  arena='backtest'):
 
         assert type(start_session) == pd.Timestamp

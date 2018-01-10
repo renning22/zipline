@@ -138,7 +138,7 @@ def ipython_only(option):
 @click.option(
     '--capital-base',
     type=float,
-    default=10e6,
+    default=10000,
     show_default=True,
     help='The starting capital for the simulation.',
 )

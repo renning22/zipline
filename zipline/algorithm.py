@@ -227,7 +227,7 @@ class TradingAlgorithm(object):
                 handle_data function definition.
             data_frequency : {'daily', 'minute'}
                The duration of the bars.
-            capital_base : float <default: 1.0e5>
+            capital_base : float <default: 10000>
                How much capital to start with.
             asset_finder : An AssetFinder object
                 A new AssetFinder object to be used in this TradingEnvironment
@@ -413,7 +413,8 @@ class TradingAlgorithm(object):
         self.initialize_args = args
         self.initialize_kwargs = kwargs
 
-        self.benchmark_sid = kwargs.pop('benchmark_sid', None)
+        # Default to sid(0), i.e. is BTC_USD.
+        self.benchmark_sid = kwargs.pop('benchmark_sid', 0)
 
         # A dictionary of capital changes, keyed by timestamp, indicating the
         # target/delta of the capital changes, along with values
@@ -541,6 +542,9 @@ class TradingAlgorithm(object):
         )
 
     def _create_benchmark_source(self):
+        from zipline.sources.benchmark_source import ConstantBenchmarkSource
+        return ConstantBenchmarkSource()
+
         if self.benchmark_sid is not None:
             benchmark_asset = self.asset_finder.retrieve_asset(
                 self.benchmark_sid)
