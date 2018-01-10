@@ -126,8 +126,6 @@ def _run(handle_data,
     if trading_calendar is None:
         trading_calendar = get_calendar('NYSE')
 
-    print('trading_calendar1: {}'.format(trading_calendar))
-
     if bundle is not None:
         bundle_data = load(
             bundle,
@@ -160,7 +158,6 @@ def _run(handle_data,
             equity_daily_reader=bundle_data.equity_daily_bar_reader,
             adjustment_reader=bundle_data.adjustment_reader
         )
-        # print('data1: {}'.format(data))
 
         pipeline_loader = USEquityPricingLoader(
             bundle_data.equity_daily_bar_reader,
@@ -177,7 +174,6 @@ def _run(handle_data,
         env = TradingEnvironment(environ=environ)
         choose_loader = None
 
-    emission_rate = 'daily'
     if broker:
         emission_rate = 'minute'
         start = pd.Timestamp.utcnow()
