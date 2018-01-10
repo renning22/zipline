@@ -198,3 +198,16 @@ class BenchmarkSource(object):
                 returns = benchmark_series.pct_change()[:]
                 returns[0] = first_day_return
                 return returns
+
+class ConstantBenchmarkSource(object):
+    """Represents a constant daily-return benchmark"""
+
+    def __init__(self):
+        self._daily_return = 0.0001
+
+    def get_value(self, dt):
+        return self._daily_return
+
+    def get_range(self, start_dt, end_dt):
+        rng = pd.date_range(start_dt, end_dt, freq='T')
+        return pd.Series(self._daily_return, index=rng)
