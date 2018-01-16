@@ -27,6 +27,7 @@ from zipline.utils.api_support import (
 
 from zipline.utils.calendars.trading_calendar import days_at_time
 from zipline.utils.serialization_utils import load_context, store_context
+from zipline.sources.benchmark_source import ConstantBenchmarkSource
 
 log = logbook.Logger("Live Trading")
 
@@ -135,6 +136,9 @@ class LiveTradingAlgorithm(TradingAlgorithm):
         )
 
         return self.trading_client.transform()
+
+    def _create_benchmark_source(self):
+        return ConstantBenchmarkSource()
 
     def updated_portfolio(self):
         return self.broker.portfolio

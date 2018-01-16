@@ -542,9 +542,6 @@ class TradingAlgorithm(object):
         )
 
     def _create_benchmark_source(self):
-        from zipline.sources.benchmark_source import ConstantBenchmarkSource
-        return ConstantBenchmarkSource()
-
         if self.benchmark_sid is not None:
             benchmark_asset = self.asset_finder.retrieve_asset(
                 self.benchmark_sid)
