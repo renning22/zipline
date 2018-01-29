@@ -39,22 +39,13 @@ class TwentyFourSevenCalendar(TradingCalendar):
             weekmask='Mon Tue Wed Thu Fri Sat Sun',
         )
 
-start_session = pd.Timestamp('2016-01-01', tz='utc')
-end_session = pd.Timestamp('2017-12-01', tz='utc')
-assets = ['BTC_USD']
-
 register_calendar(
     'TWENTYFOURSEVEN',
-    TwentyFourSevenCalendar(
-        start=start_session,
-        end=end_session
-    )
+    TwentyFourSevenCalendar()
 )
 register(
     'custom-csvdir-bundle',
     csvdir_equities(["minute"], '/home/ningr/Documents/csvdir'),
     calendar_name='TWENTYFOURSEVEN',
     minutes_per_day=1440,
-    # start_session=start_session,
-    # end_session=end_session
 )
