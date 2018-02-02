@@ -25,7 +25,7 @@ from ..utils.paths import (
     data_root,
 )
 from zipline.utils.calendars import get_calendar
-
+from ..utils.deprecate import deprecated
 
 logger = logbook.Logger('Loader')
 
@@ -111,8 +111,8 @@ def load_market_data(trading_day=None, trading_days=None, bm_symbol='SPY',
         A calendar of trading days.  Also used for determining what cached
         dates we should expect to have cached. Defaults to the NYSE calendar.
     bm_symbol : str, optional
-        Symbol for the benchmark index to load. Defaults to 'SPY', the ticker
-        for the S&P 500, provided by IEX Trading.
+        Symbol for the benchmark index to load.  Defaults to 'SPY', the Google
+        ticker for the SPDR S&P 500 ETF.
 
     Returns
     -------
@@ -340,6 +340,146 @@ def _load_cached_data(filename, first_date, last_date, now, resource_name,
         path=path,
     )
     return None
+
+
+def _load_raw_yahoo_data(indexes=None, stocks=None, start=None, end=None):
+    """Load closing prices from yahoo finance.
+
+    :Optional:
+        indexes : dict (Default: {'SPX': 'SPY'})
+            Financial indexes to load.
+        stocks : list (Default: ['AAPL', 'GE', 'IBM', 'MSFT',
+                                 'XOM', 'AA', 'JNJ', 'PEP', 'KO'])
+            Stock closing prices to load.
+        start : datetime (Default: datetime(1993, 1, 1, 0, 0, 0, 0, pytz.utc))
+            Retrieve prices from start date on.
+        end : datetime (Default: datetime(2002, 1, 1, 0, 0, 0, 0, pytz.utc))
+            Retrieve prices until end date.
+
+    :Note:
+        This is based on code presented in a talk by Wes McKinney:
+        http://wesmckinney.com/files/20111017/notebook_output.pdf
+    """
+    assert indexes is not None or stocks is not None, """
+must specify stocks or indexes"""
+
+    if start is None:
+        start = pd.datetime(1990, 1, 1, 0, 0, 0, 0, pytz.utc)
+
+    if start is not None and end is not None:
+        assert start < end, "start date is later than end date."
+
+    data = OrderedDict()
+
+    if stocks is not None:
+        for stock in stocks:
+            logger.info('Loading stock: {}'.format(stock))
+            stock_pathsafe = stock.replace(os.path.sep, '--')
+            cache_filename = "{stock}-{start}-{end}.csv".format(
+                stock=stock_pathsafe,
+                start=start,
+                end=end).replace(':', '-')
+            cache_filepath = get_cache_filepath(cache_filename)
+            if os.path.exists(cache_filepath):
+                stkd = pd.DataFrame.from_csv(cache_filepath)
+            else:
+                stkd = DataReader(stock, 'yahoo', start, end).sort_index()
+                stkd.to_csv(cache_filepath)
+            data[stock] = stkd
+
+    if indexes is not None:
+        for name, ticker in iteritems(indexes):
+            logger.info('Loading index: {} ({})'.format(name, ticker))
+            stkd = DataReader(ticker, 'yahoo', start, end).sort_index()
+            data[name] = stkd
+
+    return data
+
+
+def load_from_yahoo(indexes=None,
+                    stocks=None,
+                    start=None,
+                    end=None,
+                    adjusted=True):
+    """
+    Loads price data from Yahoo into a dataframe for each of the indicated
+    assets.  By default, 'price' is taken from Yahoo's 'Adjusted Close',
+    which removes the impact of splits and dividends. If the argument
+    'adjusted' is False, then the non-adjusted 'close' field is used instead.
+
+    :param indexes: Financial indexes to load.
+    :type indexes: dict
+    :param stocks: Stock closing prices to load.
+    :type stocks: list
+    :param start: Retrieve prices from start date on.
+    :type start: datetime
+    :param end: Retrieve prices until end date.
+    :type end: datetime
+    :param adjusted: Adjust the price for splits and dividends.
+    :type adjusted: bool
+
+    """
+    data = _load_raw_yahoo_data(indexes, stocks, start, end)
+    if adjusted:
+        close_key = 'Adj Close'
+    else:
+        close_key = 'Close'
+    df = pd.DataFrame({key: d[close_key] for key, d in iteritems(data)})
+    df.index = df.index.tz_localize(pytz.utc)
+    return df
+
+
+@deprecated(
+    'load_bars_from_yahoo is deprecated, please register a'
+    ' yahoo_equities data bundle instead',
+)
+def load_bars_from_yahoo(indexes=None,
+                         stocks=None,
+                         start=None,
+                         end=None,
+                         adjusted=True):
+    """
+    Loads data from Yahoo into a panel with the following
+    column names for each indicated security:
+
+        - open
+        - high
+        - low
+        - close
+        - volume
+        - price
+
+    Note that 'price' is Yahoo's 'Adjusted Close', which removes the
+    impact of splits and dividends. If the argument 'adjusted' is True, then
+    the open, high, low, and close values are adjusted as well.
+
+    :param indexes: Financial indexes to load.
+    :type indexes: dict
+    :param stocks: Stock closing prices to load.
+    :type stocks: list
+    :param start: Retrieve prices from start date on.
+    :type start: datetime
+    :param end: Retrieve prices until end date.
+    :type end: datetime
+    :param adjusted: Adjust open/high/low/close for splits and dividends.
+        The 'price' field is always adjusted.
+    :type adjusted: bool
+
+    """
+    data = _load_raw_yahoo_data(indexes, stocks, start, end)
+    panel = pd.Panel(data)
+    # Rename columns
+    panel.minor_axis = ['open', 'high', 'low', 'close', 'volume', 'price']
+    panel.major_axis = panel.major_axis.tz_localize(pytz.utc)
+    # Adjust data
+    if adjusted:
+        adj_cols = ['open', 'high', 'low', 'close']
+        for ticker in panel.items:
+            ratio = (panel[ticker]['price'] / panel[ticker]['close'])
+            ratio_filtered = ratio.fillna(0).values
+            for col in adj_cols:
+                panel[ticker][col] *= ratio_filtered
+    return panel
 
 
 def load_prices_from_csv(filepath, identifier_col, tz='UTC'):
